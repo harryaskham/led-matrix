@@ -4,3 +4,6 @@
 [submodule "pixelpusher"]
 	path = pixelpusher
 	url = https://github.com/hzeller/rpi-matrix-pixelpusher.git
+[submodule "pixelpusher-python"]
+	path = pixelpusher-python
+	url = https://github.com/robot-head/PixelPusher-python.git
