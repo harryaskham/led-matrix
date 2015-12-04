@@ -3,7 +3,7 @@ import time
 import math
 
 
-UDP_IP = '127.0.0.1'
+UDP_IP = '192.168.0.16'
 UDP_PORT = 5078
 
 
@@ -15,18 +15,23 @@ def Push(messages):
         socket.SOCK_DGRAM) # UDP
     bytes_sent = sock.sendto('    ' + message, (UDP_IP, UDP_PORT))
 
+def SpinLines(x, y, t):
+  return [abs(int(((x - 16) + (y - 16) * t) % 255)),
+          int(abs(t / 2.0) % 255),
+          int(127 * (math.sin(math.sqrt(t) * math.pi / 255) + 1))]
+
 def Dance():
-  t = 0.0
+  t = 0
   while True:
+    msgs = []
     for x in xrange(32):
       msg = [x]  # First entry is the strip number
       for y in xrange(32):
-        msg += [int(127 * (math.sin(t) + 1)),
-                int(127 * (math.cos(t) + 1)),
-                int(127 * (math.sin(t * t) + 1))]
-      Push([msg])
-    time.sleep(.00005)
-    t += 0.01
+        msg += SpinLines(x, y, t)
+      msgs.append(msg)
+    Push(msgs)
+    time.sleep(.01)
+    t += 1
     
 
 if __name__ == '__main__':
