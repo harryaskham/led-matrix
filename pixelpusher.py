@@ -15,10 +15,19 @@ def Push(messages):
         socket.SOCK_DGRAM) # UDP
     bytes_sent = sock.sendto('    ' + message, (UDP_IP, UDP_PORT))
 
+
 def SpinLines(x, y, t):
   return [abs(int(((x - 16) + (y - 16) * t) % 255)),
           int(abs(t / 2.0) % 255),
           int(127 * (math.sin(math.sqrt(t) * math.pi / 255) + 1))]
+
+
+def MadTanStrobe(x, y, t):
+  scale = 0.1
+  return [int(abs(x - 16) * t * scale % 255),
+          int(abs(y - 16) * (255/16) * math.cos(t * scale) % 255),
+          int(math.tan(t * scale) % 255)]
+
 
 def Dance():
   t = 0
@@ -27,7 +36,8 @@ def Dance():
     for x in xrange(32):
       msg = [x]  # First entry is the strip number
       for y in xrange(32):
-        msg += SpinLines(x, y, t)
+        # msg += SpinLines(x, y, t)
+        msg += MadTanStrobe(x, y, t)
       msgs.append(msg)
     Push(msgs)
     time.sleep(.01)
