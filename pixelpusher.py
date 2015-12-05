@@ -39,6 +39,12 @@ def SlowStrobe(x, y, t):
 def SlowRedStrobe(x, y, t):
   return [255, 0, 0] if t % 4 == 0 else [0, 0, 0]
 
+def SquareExpand(x, y, t):
+  return [
+    127 * (math.sin(y * t / 0.00001 + 3) + 1),
+    127 * (math.cos(x * t / 0.00001 + 4) + 1),
+    127 * (math.sin(t / 0.00001 + 5) + 1)]
+
 
 def Off(x, y, t):
   return [0, 0, 0]
@@ -56,15 +62,18 @@ QUIT = False
 
 
 FUNCS = [
-#    (FastStrobe, 200),
-#    (SlowStrobe, 200),
-#    (SlowRedStrobe, 200),
-#    (SpinLines, 1000),
-    (MadTanStrobe, 3000)
+    (SquareExpand, 1000),
+    (FastStrobe, 200),
+    (MadTanStrobe, 3000),
+    (FastStrobe, 200),
+    (SlowStrobe, 200),
+    (SpinLines, 1000),
+    (SlowRedStrobe, 400),
+    (FastStrobe, 200),
 ]
 
 MODS = [
-    SetBrightness(0.05),
+    SetBrightness(1),
 ]
 
 
@@ -99,7 +108,7 @@ def TurnOff():
     Push(msgs)
     time.sleep(.01)
 
-    
+
 
 if __name__ == '__main__':
   t = threading.Thread(target=Run)
