@@ -1,6 +1,7 @@
 import socket
 import time
 import math
+import threading
 
 
 UDP_IP = '192.168.0.16'
@@ -29,20 +30,48 @@ def MadTanStrobe(x, y, t):
           int(math.tan(t * scale) % 255)]
 
 
-def Dance():
+def Off(x, y, t):
+  return [0, 0, 0]
+
+
+QUIT = False
+
+
+def Run():
   t = 0
-  while True:
+  while not QUIT:
     msgs = []
     for x in xrange(32):
       msg = [x]  # First entry is the strip number
       for y in xrange(32):
-        # msg += SpinLines(x, y, t)
-        msg += MadTanStrobe(x, y, t)
+        if t % 2000 < 1000:
+          msg += SpinLines(x, y, t)
+        elif t % 2000 < 2000
+          msg += MadTanStrobe(x, y, t)
       msgs.append(msg)
     Push(msgs)
     time.sleep(.01)
     t += 1
+
+
+
+def TurnOff():
+  for x in range(10):
+    msgs = []
+    for x in xrange(32):
+      msg = [x]  # First entry is the strip number
+      for y in xrange(32):
+        msg += Off(x, y, t)
+      msgs.append(msg)
+    Push(msgs)
+    time.sleep(.01)
+
     
 
 if __name__ == '__main__':
-  Dance()
+  t = threading.Thread(target=Run)
+  t.daemon = True
+  t.start()
+  raw_input("Press Enter to continue...")
+  QUIT = True
+  TurnOff()
