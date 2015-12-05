@@ -30,28 +30,61 @@ def MadTanStrobe(x, y, t):
           int(math.tan(t * scale) % 255)]
 
 
+def FastStrobe(x, y, t):
+  return [255, 255, 255] if t % 2 == 0 else [0, 0, 0]
+
+def SlowStrobe(x, y, t):
+  return [255, 255, 255] if t % 4 == 0 else [0, 0, 0]
+
+def SlowRedStrobe(x, y, t):
+  return [255, 0, 0] if t % 4 == 0 else [0, 0, 0]
+
+
 def Off(x, y, t):
   return [0, 0, 0]
+
+def SetBrightness(l):
+  def do_set(pixel):
+    return [int(p * l) for p in pixel]
+  return do_set
+
+def Invert(pixel):
+  return [255 - p for p in pixel]
 
 
 QUIT = False
 
 
+FUNCS = [
+#    (FastStrobe, 200),
+#    (SlowStrobe, 200),
+#    (SlowRedStrobe, 200),
+#    (SpinLines, 1000),
+    (MadTanStrobe, 3000)
+]
+
+MODS = [
+    SetBrightness(0.05),
+]
+
+
 def Run():
-  t = 0
-  while not QUIT:
-    msgs = []
-    for x in xrange(32):
-      msg = [x]  # First entry is the strip number
-      for y in xrange(32):
-        if t % 2000 < 1000:
-          msg += SpinLines(x, y, t)
-        elif t % 2000 < 2000
-          msg += MadTanStrobe(x, y, t)
-      msgs.append(msg)
-    Push(msgs)
-    time.sleep(.01)
-    t += 1
+  while True:
+    for func, length in FUNCS:
+      for t in range(length):
+        if QUIT:
+          return
+        msgs = []
+        for x in xrange(32):
+          msg = [x]  # First entry is the strip number
+          for y in xrange(32):
+            pixel = func(x, y, t)
+            for mod in MODS:
+              pixel = mod(pixel)
+            msg += pixel
+          msgs.append(msg)
+        Push(msgs)
+        time.sleep(.01)
 
 
 
