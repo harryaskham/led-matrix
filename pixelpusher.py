@@ -2,6 +2,7 @@ import socket
 import time
 import math
 import threading
+import random
 
 
 UDP_IP = '192.168.0.16'
@@ -58,10 +59,79 @@ def Invert(pixel):
   return [255 - p for p in pixel]
 
 
+class Led(object):
+
+  def __init__(self, rgb, active=False):
+    self.rgb = rgb
+    self.active = active
+
+class Grid(object):
+
+  def __init__(self):
+    self.grid = [[Led([0, 0, 0]) for i in range(32)] for i in range(32)]
+
+
+class Life(Grid):
+
+  def __init__(self):
+    Grid.__init__(self)
+    for row in self.grid:
+      for i, led in enumerate(row):
+        if random.random() > 0.03:
+          led.active = True
+          led.rgb = [255, 255, 255]
+
+  def GetActiveNeighbours(self, x, y):
+    active = 0
+    if x - 1 >= 0 and self.grid[y][x-1].active:
+      active += 1
+    if x + 1 <= 31 and self.grid[y][x+1].active:
+      active += 1
+    if y - 1 >= 0 and self.grid[y-1][x].active:
+      active += 1
+    if y + 1 <= 31 and self.grid[y+1][x].active:
+      active += 1
+    if x - 1 >= 0 and y - 1 >= 0 and self.grid[y-1][x-1].active:
+      active += 1
+    if x - 1 >= 0 and y + 1 <= 31 and self.grid[y+1][x-1].active:
+      active += 1
+    if x + 1 <= 31 and y - 1 >= 0 and self.grid[y-1][x+1].active:
+      active += 1
+    if x + 1 <= 31 and y + 1 <= 31 and self.grid[y+1][x+1].active:
+      active += 1
+    return active
+
+  def Next(self):
+    new_grid = [[Led([0, 0, 0]) for i in range(32)] for i in range(32)]
+    for y, row in enumerate(self.grid):
+      for x, led in enumerate(row):
+        active_neighbours = self.GetActiveNeighbours(x, y)
+        if active_neighbours < 2 or active_neighbours > 4:
+          new_grid[y][x].active = False
+          new_grid[y][x].rgb = [0, 0, 0]
+        else:
+          new_grid[y][x].active = True
+          new_grid[y][x].rgb = [255, 255, 255]
+    self.grid = new_grid
+
+
+last_t = 0
+def GridDrawer(grid):
+  def run(x, y, t):
+    global last_t
+    slowdown = 3
+    if t / slowdown > last_t:
+      last_t = t / slowdown
+      grid.Next()
+    return grid.grid[y][x].rgb
+  return run
+    
+
 QUIT = False
 
 
 FUNCS = [
+    (GridDrawer(Life()), 10000),
     (SquareExpand, 1000),
     (FastStrobe, 200),
     (MadTanStrobe, 3000),
