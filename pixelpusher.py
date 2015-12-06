@@ -1,4 +1,7 @@
 import socket
+from PIL import Image
+import images2gif
+
 import time
 import math
 import threading
@@ -64,76 +67,117 @@ class Led(object):
   def __init__(self, rgb, active=False):
     self.rgb = rgb
     self.active = active
+    self.heat = 0
 
 class Grid(object):
 
   def __init__(self):
     self.grid = [[Led([0, 0, 0]) for i in range(32)] for i in range(32)]
 
+  def AtOffset(self, x, y, x_offset, y_offset):
+    return self.grid[(y + y_offset) % 32][(x + x_offset) % 32]
+
+  def GetActiveNeighbours(self, x, y):
+    active = 0
+    if self.AtOffset(x, y, -1, 0).active:
+      active += 1
+    if self.AtOffset(x, y, 1, 0).active:
+      active += 1
+    if self.AtOffset(x, y, 0, -1).active:
+      active += 1
+    if self.AtOffset(x, y, 0, 1).active:
+      active += 1
+    if self.AtOffset(x, y, -1, -1).active:
+      active += 1
+    if self.AtOffset(x, y, -1, 1).active:
+      active += 1
+    if self.AtOffset(x, y, 1, -1).active:
+      active += 1
+    if self.AtOffset(x, y, 1, 1).active:
+      active += 1
+    return active
+
+  def Next(self):
+    raise Exception
+
 
 class Life(Grid):
 
   def __init__(self):
     Grid.__init__(self)
+    self.grid[0][1].active = True
+    self.grid[1][2].active = True
+    self.grid[2][0].active = True
+    self.grid[2][1].active = True
+    self.grid[2][2].active = True
+    self.grid[0][1].rgb = [255,255,255]
+    self.grid[1][2].rgb = [255,255,255]
+    self.grid[2][0].rgb = [255,255,255]
+    self.grid[2][1].rgb = [255,255,255]
+    self.grid[2][2].rgb = [255,255,255]
     for row in self.grid:
       for i, led in enumerate(row):
-        if random.random() > 0.03:
+        if random.random() < 0.3:
           led.active = True
           led.rgb = [255, 255, 255]
 
-  def GetActiveNeighbours(self, x, y):
-    active = 0
-    if x - 1 >= 0 and self.grid[y][x-1].active:
-      active += 1
-    if x + 1 <= 31 and self.grid[y][x+1].active:
-      active += 1
-    if y - 1 >= 0 and self.grid[y-1][x].active:
-      active += 1
-    if y + 1 <= 31 and self.grid[y+1][x].active:
-      active += 1
-    if x - 1 >= 0 and y - 1 >= 0 and self.grid[y-1][x-1].active:
-      active += 1
-    if x - 1 >= 0 and y + 1 <= 31 and self.grid[y+1][x-1].active:
-      active += 1
-    if x + 1 <= 31 and y - 1 >= 0 and self.grid[y-1][x+1].active:
-      active += 1
-    if x + 1 <= 31 and y + 1 <= 31 and self.grid[y+1][x+1].active:
-      active += 1
-    return active
-
   def Next(self):
-    new_grid = [[Led([0, 0, 0]) for i in range(32)] for i in range(32)]
+    new_grid = [[Led([0, 0, 0]) for y in range(32)] for x in range(32)]
     for y, row in enumerate(self.grid):
       for x, led in enumerate(row):
         active_neighbours = self.GetActiveNeighbours(x, y)
-        if active_neighbours < 2 or active_neighbours > 4:
-          new_grid[y][x].active = False
-          new_grid[y][x].rgb = [0, 0, 0]
-        else:
+        if (active_neighbours == 2 and self.grid[y][x].active or
+            active_neighbours == 3):
           new_grid[y][x].active = True
           new_grid[y][x].rgb = [255, 255, 255]
+        else:
+          new_grid[y][x].active = False
     self.grid = new_grid
 
 
-last_t = 0
-def GridDrawer(grid):
-  def run(x, y, t):
-    global last_t
-    slowdown = 3
-    if t / slowdown > last_t:
-      last_t = t / slowdown
-      grid.Next()
-    return grid.grid[y][x].rgb
-  return run
+class Gif(Grid):
+
+  def __init__(self, path):
+    Grid.__init__(self)
+    self.frame = 0
+    self.frames = images2gif.readGif(path, False)
+    [frame.thumbnail((32,32), Image.ANTIALIAS) for frame in self.frames]
+
+  def Next(self):
+    new_grid = [[Led([0, 0, 0]) for y in range(32)] for x in range(32)]
+    frame = self.frames[self.frame]
+    for y, row in enumerate(self.grid):
+      for x, led in enumerate(row):
+        pixel = frame.getpixel((x, y))
+        led.rgb = pixel[-3:]
+    self.frame = (self.frame + 1) % len(self.frames)
+
+
+class GridDrawer(object):
+
+  def __init__(self, grid, slowdown=1):
+    self.last_t = 0
+    self.grid = grid
+    self.slowdown = slowdown
+
+  def Run(self, x, y, t):
+    if t / self.slowdown > self.last_t:
+      self.last_t = t / self.slowdown
+      self.grid.Next()
+    return self.grid.grid[x][y].rgb
     
 
 QUIT = False
 
 
 FUNCS = [
-    (GridDrawer(Life()), 10000),
-    (SquareExpand, 1000),
+    (GridDrawer(Gif('trippy.gif')).Run, 300),
+    (GridDrawer(Life(), slowdown=3).Run, 300),
+    (GridDrawer(Gif('rotsq.gif')).Run, 300),
+    (GridDrawer(Gif('triangle.gif')).Run, 300),
+    (SquareExpand, 600),
     (FastStrobe, 200),
+    (GridDrawer(Gif('nyan.gif'), slowdown=3).Run, 300),
     (MadTanStrobe, 3000),
     (FastStrobe, 200),
     (SlowStrobe, 200),
