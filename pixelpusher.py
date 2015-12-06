@@ -49,6 +49,9 @@ def SquareExpand(x, y, t):
     127 * (math.cos(x * t / 0.00001 + 4) + 1),
     127 * (math.sin(t / 0.00001 + 5) + 1)]
 
+def Random(x, y, t):
+  return [int(255 * random.random()) for i in range(3)]
+
 
 def Off(x, y, t):
   return [0, 0, 0]
@@ -153,6 +156,49 @@ class Gif(Grid):
     self.frame = (self.frame + 1) % len(self.frames)
 
 
+class Snake(Grid):
+
+  def __init__(self):
+    Grid.__init__(self)
+    self.snake_pos = [(0, 0)]
+    self.food_pos = (4, 4)
+
+  def Draw(self):
+    self.grid = [[Led([0, 0, 0]) for y in range(32)] for x in range(32)]
+    for p in self.snake_pos:
+      self.grid[p[1]][p[0]].rgb = [255, 255, 255]
+    self.grid[self.food_pos[1]][self.food_pos[0]].rgb = [255, 0, 0]
+
+  def Next(self):
+    self.Draw()
+    last_piece = self.MoveToFood()
+    if self.food_pos in self.snake_pos:
+      self.food_pos = (int(32 * random.random()), int(32 * random.random()))
+      if last_piece:
+        self.snake_pos.append(last_piece)
+
+  def MoveToFood(self):
+    direction = (self.snake_pos[0][0] - self.food_pos[0],
+                 self.snake_pos[0][1] - self.food_pos[1])
+    if direction == (0, 0):
+      return
+
+    if direction[0] < 0:
+      self.snake_pos = (
+          [(self.snake_pos[0][0]+1, self.snake_pos[0][1])] + self.snake_pos)
+    elif direction[0] > 0:
+      self.snake_pos = (
+          [(self.snake_pos[0][0]-1, self.snake_pos[0][1])] + self.snake_pos)
+    elif direction[1] < 0:
+      self.snake_pos = (
+          [(self.snake_pos[0][0], self.snake_pos[0][1]+1)] + self.snake_pos)
+    elif direction[1] > 0:
+      self.snake_pos = (
+          [(self.snake_pos[0][0], self.snake_pos[0][1]-1)] + self.snake_pos)
+    return self.snake_pos.pop()
+
+
+
 class GridDrawer(object):
 
   def __init__(self, grid, slowdown=1):
@@ -167,13 +213,23 @@ class GridDrawer(object):
     return self.grid.grid[x][y].rgb
     
 
+def Circle(x, y, t):
+  scale = 0.01
+  return [(math.pow(x-8+t/10, 2) + math.pow(y-8-t/10, 2)) % 256,
+          int(60 * (math.cos(t * scale) + 1)),
+          int(50 * (math.sin(t * scale) + 1))]
+
+
 QUIT = False
 
 
 FUNCS = [
+    (GridDrawer(Snake()).Run, 100),
+    (Random, 300),
     (GridDrawer(Gif('trippy.gif')).Run, 300),
     (GridDrawer(Life(), slowdown=3).Run, 300),
     (GridDrawer(Gif('rotsq.gif')).Run, 300),
+    (Circle, 600),
     (GridDrawer(Gif('triangle.gif')).Run, 300),
     (SquareExpand, 600),
     (FastStrobe, 200),
