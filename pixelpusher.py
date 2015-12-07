@@ -63,7 +63,8 @@ def Off(x, y, t):
 class RotaryHandler(object):
 
   def __init__(self, increment=0.01):
-    self.levels = [1.0, 1.0]
+    # brightness speed contrast
+    self.levels = [1.0, 1.0, 1.0]
     self.mode = 0
     self.increment = increment
     self.rot = inputs.RotaryEncoder(
@@ -86,6 +87,9 @@ class RotaryHandler(object):
 
   def GetSleepInRange(self, t1, t2):
     return t1 + (t2 - t1) * (1.0 - self.levels[1])
+
+  def ContrastMod(self, pixel):
+    return [127 + int((p - 127) * self.levels[2]) for p in pixel]
 
 
 class ButtonHandler(object):
@@ -285,11 +289,9 @@ rotary_handler = RotaryHandler()
 button_handler = ButtonHandler()
 
 MODS = [
+    rotary_handler.ContrastMod,
     rotary_handler.BrightnessMod
 ]
-
-
-SLEEP = 0.01
 
 
 def GetFrameMsgs(func, t):
@@ -316,16 +318,6 @@ def Run():
         return
       Push(GetFrameMsgs(func, t))
       time.sleep(rotary_handler.GetSleepInRange(0.00, 1.0))
-
-
-def RunPaired(func1, func2):
-  t = 0
-  while not QUIT:
-    Push(GetFrameMsgs(func1, t))
-    time.sleep(SLEEP)
-    Push(GetFrameMsgs(func2, t))
-    time.sleep(SLEEP)
-    t += 1
 
 
 def TurnOff():
