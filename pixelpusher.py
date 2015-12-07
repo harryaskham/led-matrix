@@ -216,6 +216,12 @@ class Snake(Grid):
   def Next(self):
     self.Draw()
     last_piece = self.MoveToFood()
+    if len(self.snake_pos) < len(set(self.snake_pos)):
+      # crashed; sleep and start over.
+      time.sleep(0.5)
+      self.snake_pos = [(0, 0)]
+      self.food_pos = (4, 4)
+      return
     if self.food_pos in self.snake_pos:
       self.food_pos = (int(32 * random.random()), int(32 * random.random()))
       if last_piece:
@@ -267,6 +273,7 @@ QUIT = False
 
 
 FUNCS = [
+    (GridDrawer(Snake()).Run, 1000000),
     (GridDrawer(Life(), slowdown=2).Run, 500),
     (GridDrawer(Gif('trippy.gif'), slowdown=2).Run, 300),
     (GridDrawer(Gif('rotsq.gif')).Run, 300),
