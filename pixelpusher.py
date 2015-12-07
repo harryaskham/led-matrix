@@ -6,8 +6,6 @@ import time
 import math
 import threading
 import random
-import numpy as np
-from scipy import signal
 
 
 UDP_IP = '192.168.0.16'
@@ -122,7 +120,7 @@ class Life(Grid):
     self.grid[2][2].rgb = [255,255,255]
     for row in self.grid:
       for i, led in enumerate(row):
-        if random.random() < 0.3:
+        if random.random() < 0.5:
           led.active = True
           led.rgb = [255, 255, 255]
 
@@ -200,34 +198,10 @@ class Snake(Grid):
     return self.snake_pos.pop()
 
 
-class Tensors(Grid):
-
-  def __init__(self):
-    Grid.__init__(self)
-    self.r = np.random.normal(size=[32, 32])
-    self.g = np.random.normal(size=[32, 32])
-    self.b = np.random.normal(size=[32, 32])
-
-  def Next(self):
-    self.UpdateTensors()
-    for y, row in enumerate(self.grid):
-      for x, led in enumerate(row):
-        led.rgb = [
-            50 * self.r[y][x] % 256,
-            50 * self.g[y][x] % 256,
-            50 * self.b[y][x] % 256]
-
-  def UpdateTensors(self):
-    r = self.g + 0.99 * self.b
-    g = self.r - 0.99 * self.b
-    b = self.g + 0.99 * self.r
-    self.r, self.g, self.b = r, g, b
-
-
 class GridDrawer(object):
 
   def __init__(self, grid, slowdown=1):
-    self.last_t = 0
+    self.last_t = -1
     self.grid = grid
     self.slowdown = slowdown
 
@@ -249,9 +223,8 @@ QUIT = False
 
 
 FUNCS = [
-   # (GridDrawer(Tensors()).Run, 1000),
+    (GridDrawer(Life(), slowdown=2).Run, 500),
     (GridDrawer(Gif('trippy.gif'), slowdown=2).Run, 300),
-    (GridDrawer(Life(), slowdown=3).Run, 300),
     (GridDrawer(Gif('rotsq.gif')).Run, 300),
     (GridDrawer(Snake()).Run, 1000),
     (Random, 300),
@@ -273,24 +246,39 @@ MODS = [
 ]
 
 
-def Run():
-  while True:
-    for func, length in FUNCS:
-      for t in range(length):
-        if QUIT:
-          return
-        msgs = []
-        for x in xrange(32):
-          msg = [x]  # First entry is the strip number
-          for y in xrange(32):
-            pixel = func(x, y, t)
-            for mod in MODS:
-              pixel = mod(pixel)
-            msg += pixel
-          msgs.append(msg)
-        Push(msgs)
-        time.sleep(.01)
+SLEEP = 0.01
 
+
+def GetFrameMsgs(func, t):
+  msgs = []
+  for x in xrange(32):
+    msg = [x]  # First entry is the strip number
+    for y in xrange(32):
+      pixel = func(x, y, t)
+      for mod in MODS:
+        pixel = mod(pixel)
+      msg += pixel
+    msgs.append(msg)
+  return msgs
+
+
+def Run():
+  for func, length in FUNCS:
+    for t in range(length):
+      if QUIT:
+        return
+      Push(GetFrameMsgs(func, t))
+      time.sleep(SLEEP)
+
+
+def RunPaired(func1, func2):
+  t = 0
+  while not QUIT:
+    Push(GetFrameMsgs(func1, t))
+    time.sleep(SLEEP)
+    Push(GetFrameMsgs(func2, t))
+    time.sleep(SLEEP)
+    t += 1
 
 
 def TurnOff():
