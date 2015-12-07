@@ -1,11 +1,14 @@
 import socket
 from PIL import Image
 import images2gif
+import RPi.GPIO as GPIO
 
 import time
 import math
 import threading
 import random
+
+import inputs
 
 
 UDP_IP = '192.168.0.16'
@@ -56,10 +59,24 @@ def Random(x, y, t):
 def Off(x, y, t):
   return [0, 0, 0]
 
-def SetBrightness(l):
-  def do_set(pixel):
-    return [int(p * l) for p in pixel]
-  return do_set
+
+class RotaryHandler(object):
+
+  def __init__(self, increment=0.01):
+    self.level = 1.0
+    self.increment = increment
+    self.rot = inputs.RotaryEncoder(
+        on_rotation=self.HandleRotation)
+
+  def HandleRotation(self, clockwise):
+    if clockwise and self.level < 0.99:
+      self.level += self.increment
+    elif not clockwise and self.level > 0.1:
+      self.level -= self.increment
+
+  def BrightnessMod(self, pixel):
+    return [int(p * self.level) for p in pixel]
+
 
 def Invert(pixel):
   return [255 - p for p in pixel]
@@ -241,8 +258,10 @@ FUNCS = [
     (FastStrobe, 200),
 ]
 
+rotary_handler = RotaryHandler()
+
 MODS = [
-    SetBrightness(1),
+    rotary_handler.BrightnessMod
 ]
 
 
@@ -295,9 +314,12 @@ def TurnOff():
 
 
 if __name__ == '__main__':
-  t = threading.Thread(target=Run)
-  t.daemon = True
-  t.start()
-  raw_input("Press Enter to continue...")
-  QUIT = True
-  TurnOff()
+  try:
+    t = threading.Thread(target=Run)
+    t.daemon = True
+    t.start()
+    raw_input("Press Enter to continue...")
+    QUIT = True
+    TurnOff()
+  finally:
+    GPIO.cleanup()
