@@ -63,19 +63,29 @@ def Off(x, y, t):
 class RotaryHandler(object):
 
   def __init__(self, increment=0.01):
-    self.level = 1.0
+    self.levels = [1.0, 1.0]
+    self.mode = 0
     self.increment = increment
     self.rot = inputs.RotaryEncoder(
-        on_rotation=self.HandleRotation)
+        on_rotation=self.HandleRotation,
+        on_button=self.HandleButton)
 
   def HandleRotation(self, clockwise):
-    if clockwise and self.level < 0.99:
-      self.level += self.increment
-    elif not clockwise and self.level > 0.1:
-      self.level -= self.increment
+    if clockwise and self.levels[self.mode] < 0.99:
+      self.levels[self.mode] += self.increment
+    elif not clockwise and self.levels[self.mode] > 0.1:
+      self.levels[self.mode] -= self.increment
+
+  def HandleButton(self, down):
+    if down:
+      self.mode = (self.mode + 1) % len(self.levels)
+      print 'Switched to mode %d' % self.mode
 
   def BrightnessMod(self, pixel):
-    return [int(p * self.level) for p in pixel]
+    return [int(p * self.levels[0]) for p in pixel]
+
+  def GetSleepInRange(self, t1, t2):
+    return t1 + (t2 - t1) * (1.0 - self.levels[1])
 
 
 def Invert(pixel):
@@ -287,7 +297,7 @@ def Run():
       if QUIT:
         return
       Push(GetFrameMsgs(func, t))
-      time.sleep(SLEEP)
+      time.sleep(rotary_handler.GetSleepInRange(0.00, 1.0))
 
 
 def RunPaired(func1, func2):
