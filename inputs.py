@@ -48,3 +48,22 @@ class RotaryEncoder(object):
     _, _, e = self._ReadPins()
     if self.on_button:
       self.on_button(down=e==0)
+
+
+class Button(object):
+  
+  BUTTON_PIN = 19
+
+  def __init__(self, on_button=None):
+    self.on_button = on_button
+
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    GPIO.setup(self.BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    
+    GPIO.add_event_detect(self.BUTTON_PIN, GPIO.BOTH, callback=self._HandleButton, bouncetime=200)
+
+  def _HandleButton(self, pin):
+    down = GPIO.input(self.BUTTON_PIN) == 0
+    if self.on_button:
+      self.on_button(down=down)

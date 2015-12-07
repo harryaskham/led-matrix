@@ -88,6 +88,19 @@ class RotaryHandler(object):
     return t1 + (t2 - t1) * (1.0 - self.levels[1])
 
 
+class ButtonHandler(object):
+
+  def __init__(self):
+    self.paused = False
+    self.button = inputs.Button(
+        on_button=self.HandleButton)
+
+  def HandleButton(self, down):
+    if down:
+      print 'Toggle pause'
+      self.paused = not self.paused
+
+
 def Invert(pixel):
   return [255 - p for p in pixel]
 
@@ -269,6 +282,7 @@ FUNCS = [
 ]
 
 rotary_handler = RotaryHandler()
+button_handler = ButtonHandler()
 
 MODS = [
     rotary_handler.BrightnessMod
@@ -294,6 +308,10 @@ def GetFrameMsgs(func, t):
 def Run():
   for func, length in FUNCS:
     for t in range(length):
+      while button_handler.paused:
+        if QUIT:
+          return
+        time.sleep(1)
       if QUIT:
         return
       Push(GetFrameMsgs(func, t))
