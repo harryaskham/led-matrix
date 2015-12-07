@@ -216,7 +216,7 @@ class Snake(Grid):
   def Next(self):
     self.Draw()
     last_piece = self.MoveToFood()
-    if len(self.snake_pos) < len(set(self.snake_pos)):
+    if len(self.snake_pos) > len(set(self.snake_pos)):
       # crashed; sleep and start over.
       time.sleep(0.5)
       self.snake_pos = [(0, 0)]
@@ -233,18 +233,36 @@ class Snake(Grid):
     if direction == (0, 0):
       return
 
-    if direction[0] < 0:
-      self.snake_pos = (
-          [(self.snake_pos[0][0]+1, self.snake_pos[0][1])] + self.snake_pos)
-    elif direction[0] > 0:
-      self.snake_pos = (
-          [(self.snake_pos[0][0]-1, self.snake_pos[0][1])] + self.snake_pos)
-    elif direction[1] < 0:
-      self.snake_pos = (
-          [(self.snake_pos[0][0], self.snake_pos[0][1]+1)] + self.snake_pos)
-    elif direction[1] > 0:
-      self.snake_pos = (
-          [(self.snake_pos[0][0], self.snake_pos[0][1]-1)] + self.snake_pos)
+    right_coord = (self.snake_pos[0][0]+1, self.snake_pos[0][1])
+    left_coord = (self.snake_pos[0][0]-1, self.snake_pos[0][1])
+    down_coord = (self.snake_pos[0][0], self.snake_pos[0][1]+1)
+    up_coord = (self.snake_pos[0][0], self.snake_pos[0][1]-1) 
+
+    right_free = right_coord[0] <= 31 and right_coord not in self.snake_pos
+    left_free = left_coord[0] >= 0 and left_coord not in self.snake_pos
+    down_free = down_coord[1] <= 31 and down_coord not in self.snake_pos
+    up_free = up_coord[1] >= 0 and up_coord not in self.snake_pos
+
+    # Prefer food direction but go anywhere free.
+    if direction[0] < 0 and right_free:
+      self.snake_pos = [right_coord] + self.snake_pos
+    elif direction[0] > 0 and left_free:
+      self.snake_pos = [left_coord] + self.snake_pos
+    elif direction[1] < 0 and down_free:
+      self.snake_pos = [down_coord] + self.snake_pos
+    elif direction[1] > 0 and up_free:
+      self.snake_pos = [up_coord] + self.snake_pos
+    elif right_free:
+      self.snake_pos = [right_coord] + self.snake_pos
+    elif left_free:
+      self.snake_pos = [left_coord] + self.snake_pos
+    elif down_free:
+      self.snake_pos = [down_coord] + self.snake_pos
+    else:
+      # either move up or die tryin
+      self.snake_pos = [up_coord] + self.snake_pos
+
+    # spit out the lost piece.
     return self.snake_pos.pop()
 
 

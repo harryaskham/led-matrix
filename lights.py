@@ -3,108 +3,150 @@
 import RPi.GPIO as GPIO
 import time
 import threading
+import random
+import math
 
-GPIO.setmode(GPIO.BCM)
-red1_pin = 11
-green1_pin = 27
-blue1_pin = 7
-red2_pin = 8
-green2_pin = 9
-blue2_pin = 10
-clock_pin = 17
-a_pin = 22
-b_pin = 23
-c_pin = 24
-d_pin = 25
-latch_pin = 4
-oe_pin = 18
 
-GPIO.setup(red1_pin, GPIO.OUT)
-GPIO.setup(green1_pin, GPIO.OUT)
-GPIO.setup(blue1_pin, GPIO.OUT)
-GPIO.setup(red2_pin, GPIO.OUT)
-GPIO.setup(green2_pin, GPIO.OUT)
-GPIO.setup(blue2_pin, GPIO.OUT)
-GPIO.setup(clock_pin, GPIO.OUT)
-GPIO.setup(a_pin, GPIO.OUT)
-GPIO.setup(b_pin, GPIO.OUT)
-GPIO.setup(c_pin, GPIO.OUT)
-GPIO.setup(d_pin, GPIO.OUT)
-GPIO.setup(latch_pin, GPIO.OUT)
-GPIO.setup(oe_pin, GPIO.OUT)
-
-screen = [[0 for x in xrange(32)] for x in xrange(32)]
-
-delay = 0.0000001
-
-def clock():
-    GPIO.output(clock_pin, 1)
-    GPIO.output(clock_pin, 0)
-
-def latch():
-    GPIO.output(latch_pin, 1)
-    GPIO.output(latch_pin, 0)
-
-def bits_from_int(x):
+def BitsFromInt(x):
     a_bit = x & 1
     b_bit = x & 2
     c_bit = x & 4
     d_bit = x & 8
     return (a_bit, b_bit, c_bit, d_bit)
 
-def set_row(row):
-    a_bit, b_bit, c_bit, d_bit = bits_from_int(row)
-    GPIO.output(a_pin, a_bit)
-    GPIO.output(b_pin, b_bit)
-    GPIO.output(c_pin, c_bit)
-    GPIO.output(d_pin, d_bit)
 
-def set_color_top(color):
-    red, green, blue, _ = bits_from_int(color)
-    GPIO.output(red1_pin, red)
-    GPIO.output(green1_pin, green)
-    GPIO.output(blue1_pin, blue)
+class LedMatrix(object):
+  """controller class for the 32x32 matrix"""
+  DIM = 32
+  DELAY = 0.0000001
+  PWM_BITS = 8
 
-def set_color_bottom(color):
-    red, green, blue, _ = bits_from_int(color)
-    GPIO.output(red2_pin, red)
-    GPIO.output(green2_pin, green)
-    GPIO.output(blue2_pin, blue)
+  def __init__(self):
+    GPIO.setmode(GPIO.BCM)
+    self.red1_pin = 11
+    self.green1_pin = 27
+    self.blue1_pin = 7
+    self.red2_pin = 8
+    self.green2_pin = 9
+    self.blue2_pin = 10
+    self.clock_pin = 17
+    self.a_pin = 22
+    self.b_pin = 23
+    self.c_pin = 24
+    self.d_pin = 25
+    self.latch_pin = 4
+    self.oe_pin = 18
 
-def refresh():
-    for row in range(16):
-        GPIO.output(oe_pin, 1)
-        set_color_top(0)
-        set_row(row)
-        for col in range(32):
-            set_color_top(screen[row][col])
-            set_color_bottom(screen[row+8][col])
-            clock()
-        #GPIO.output(oe_pin, 0)
-        latch()
-        GPIO.output(oe_pin, 0)
-        time.sleep(delay)
+    GPIO.setup(self.red1_pin, GPIO.OUT)
+    GPIO.setup(self.green1_pin, GPIO.OUT)
+    GPIO.setup(self.blue1_pin, GPIO.OUT)
+    GPIO.setup(self.red2_pin, GPIO.OUT)
+    GPIO.setup(self.green2_pin, GPIO.OUT)
+    GPIO.setup(self.blue2_pin, GPIO.OUT)
+    GPIO.setup(self.clock_pin, GPIO.OUT)
+    GPIO.setup(self.a_pin, GPIO.OUT)
+    GPIO.setup(self.b_pin, GPIO.OUT)
+    GPIO.setup(self.c_pin, GPIO.OUT)
+    GPIO.setup(self.d_pin, GPIO.OUT)
+    GPIO.setup(self.latch_pin, GPIO.OUT)
+    GPIO.setup(self.oe_pin, GPIO.OUT)
 
-def fill_rectangle(x1, y1, x2, y2, color):
+    self.screen = [[[0, 0, 0] for x in xrange(32)] for x in xrange(32)]
+    self.scan_i = 0
+    self.quit = False
+
+  def Clock(self):
+    GPIO.output(self.clock_pin, 1)
+    GPIO.output(self.clock_pin, 0)
+
+  def Latch(self):
+    GPIO.output(self.latch_pin, 1)
+    GPIO.output(self.latch_pin, 0)
+
+  def SetRow(self, row):
+    a_bit, b_bit, c_bit, d_bit = BitsFromInt(row)
+    GPIO.output(self.a_pin, a_bit)
+    GPIO.output(self.b_pin, b_bit)
+    GPIO.output(self.c_pin, c_bit)
+    GPIO.output(self.d_pin, d_bit)
+
+  def GetRgbBits(self, rgb):
+    return [(self.scan_i % self.PWM_BITS) * (256 / self.PWM_BITS) < p for p in rgb]
+
+  def SetColorTop(self, rgb):
+    r, g, b = self.GetRgbBits(rgb)
+    GPIO.output(self.red1_pin, r)
+    GPIO.output(self.green1_pin, g)
+    GPIO.output(self.blue1_pin, b)
+
+  def SetColorBottom(self, rgb):
+    r, g, b = self.GetRgbBits(rgb)
+    GPIO.output(self.red2_pin, r)
+    GPIO.output(self.green2_pin, g)
+    GPIO.output(self.blue2_pin, b)
+
+  def Refresh(self):
+    for row in range(self.DIM / 2):
+      self.SetRow(row)
+      for i in range(self.PWM_BITS):  #pwm hack
+        GPIO.output(self.oe_pin, 1)
+        for col in range(self.DIM):
+          self.SetColorTop(self.screen[row][col])
+          self.SetColorBottom(self.screen[row+self.DIM/2][col])
+          self.Clock()
+        self.Latch()
+        GPIO.output(self.oe_pin, 0)
+        self.scan_i += 1
+      time.sleep(self.DELAY)
+
+  def FillRect(self, x1, y1, x2, y2, rgb):
     for x in range(x1, x2):
-        for y in range(y1, y2):
-            screen[y][x] = color
+      for y in range(y1, y2):
+        self.screen[y][x] = rgb
+
+  def SetPixel(self, x, y, rgb):
+    self.screen[y][x] = rgb
+
+  def Start(self):
+    print 'Starting LED matrix'
+    def run():
+      while not self.quit:
+        self.Refresh()
+    t = threading.Thread(target=run)
+    t.daemon = True
+    t.start()
+
+  def Stop(self):
+    print 'Stopping LED matrix'
+    self.quit = True
+    time.sleep(0.5)
+    self.FillRect(0, 0, 32, 32, [0, 0, 0])
+    self.Refresh()
+    GPIO.cleanup()
 
 
-def set_pixel(x, y, color):
-    screen[y][x] = color
-"""
-def update():
+def main():
+  m = LedMatrix()
+  m.FillRect(0, 0, 10, 10, [255, 0, 0])
+  m.FillRect(20, 23, 27, 30, [0, 255, 0])
+  m.SetPixel(4, 4, [0, 0, 255])
+  m.Start()
+
+  def DrawLoop():
     t = 0
     while True:
-        fill_rectangle(0, 0, 32, 32, t)
-        t += 1
-        time.sleep(1)
-        print screen
-th = threading.Thread(target=update)
-th.start()
-"""
-fill_rectangle(0, 0, 32, 32, 1)
+      for y in range(32):
+        for x in range(32):
+          m.SetPixel(x, y, [(x * 255) / 32, (y * 255) / 32, 255])
+      time.sleep(0.1)
+      t += 1
 
-while True:
-    refresh()
+  t = threading.Thread(target=DrawLoop)
+  t.daemon = True
+  t.start()
+
+  raw_input('enter quits')
+  m.Stop()
+
+
+main()
