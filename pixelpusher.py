@@ -6,6 +6,8 @@ import time
 import math
 import threading
 import random
+import numpy as np
+from scipy import signal
 
 
 UDP_IP = '192.168.0.16'
@@ -198,6 +200,29 @@ class Snake(Grid):
     return self.snake_pos.pop()
 
 
+class Tensors(Grid):
+
+  def __init__(self):
+    Grid.__init__(self)
+    self.r = np.random.normal(size=[32, 32])
+    self.g = np.random.normal(size=[32, 32])
+    self.b = np.random.normal(size=[32, 32])
+
+  def Next(self):
+    self.UpdateTensors()
+    for y, row in enumerate(self.grid):
+      for x, led in enumerate(row):
+        led.rgb = [
+            50 * self.r[y][x] % 256,
+            50 * self.g[y][x] % 256,
+            50 * self.b[y][x] % 256]
+
+  def UpdateTensors(self):
+    r = self.g + 0.99 * self.b
+    g = self.r - 0.99 * self.b
+    b = self.g + 0.99 * self.r
+    self.r, self.g, self.b = r, g, b
+
 
 class GridDrawer(object):
 
@@ -211,7 +236,7 @@ class GridDrawer(object):
       self.last_t = t / self.slowdown
       self.grid.Next()
     return self.grid.grid[x][y].rgb
-    
+
 
 def Circle(x, y, t):
   scale = 0.01
@@ -224,11 +249,12 @@ QUIT = False
 
 
 FUNCS = [
-    (GridDrawer(Snake()).Run, 100),
-    (Random, 300),
-    (GridDrawer(Gif('trippy.gif')).Run, 300),
+   # (GridDrawer(Tensors()).Run, 1000),
+    (GridDrawer(Gif('trippy.gif'), slowdown=2).Run, 300),
     (GridDrawer(Life(), slowdown=3).Run, 300),
     (GridDrawer(Gif('rotsq.gif')).Run, 300),
+    (GridDrawer(Snake()).Run, 1000),
+    (Random, 300),
     (Circle, 600),
     (GridDrawer(Gif('triangle.gif')).Run, 300),
     (SquareExpand, 600),
