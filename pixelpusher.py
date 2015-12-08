@@ -291,7 +291,6 @@ QUIT = False
 
 
 FUNCS = [
-    (GridDrawer(Snake()).Run, 1000000),
     (GridDrawer(Life(), slowdown=2).Run, 500),
     (GridDrawer(Gif('trippy.gif'), slowdown=2).Run, 300),
     (GridDrawer(Gif('rotsq.gif')).Run, 300),
