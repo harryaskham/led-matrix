@@ -330,7 +330,8 @@ func_map = {
     'tan': MadTanStrobe,
     'slowstrobe': SlowStrobe,
     'spinlines': SpinLines,
-    'redstrobe': SlowRedStrobe
+    'redstrobe': SlowRedStrobe,
+    'off': Off
 }
 
 
