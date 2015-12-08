@@ -1,4 +1,5 @@
 import socket
+import itertools
 import argparse
 from PIL import Image
 import images2gif
@@ -242,7 +243,7 @@ class Snake(Grid):
     right_coord = (self.snake_pos[0][0]+1, self.snake_pos[0][1])
     left_coord = (self.snake_pos[0][0]-1, self.snake_pos[0][1])
     down_coord = (self.snake_pos[0][0], self.snake_pos[0][1]+1)
-    up_coord = (self.snake_pos[0][0], self.snake_pos[0][1]-1) 
+    up_coord = (self.snake_pos[0][0], self.snake_pos[0][1]-1)
 
     right_free = right_coord[0] <= 31 and right_coord not in self.snake_pos
     left_free = left_coord[0] >= 0 and left_coord not in self.snake_pos
@@ -330,6 +331,10 @@ def GetFrameMsgs(func, t, mods):
 
 
 def Run(pi_mode):
+  # 60fps canvas
+  grid = FpsGrid()
+  grid.Start()
+
   print 'Pi mode: %s' % pi_mode
   mods = []
   if pi_mode:
@@ -348,10 +353,50 @@ def Run(pi_mode):
         time.sleep(1)
       if QUIT:
         return
-      Push(GetFrameMsgs(func, t, mods))
-
-      sleep = rotary_handler.GetSleepInRange(0.00, 1.0) if pi_mode else 0.002
+      
+      # compatibility hack; really we just need to draw to the grid here any
+      # frame. dont need to rev engineer
+      msgs = GetFrameMsgs(func, t, mods)
+      for x, msg in enumerate(msgs):
+        rgbs = msg[1:]
+        for y in range(32):
+          grid.grid[y][x].rgb = rgbs[y*3:(y+1)*3]
+      sleep = rotary_handler.GetSleepInRange(0.00, 1.0) if pi_mode else 0.01
       time.sleep(sleep)
+
+
+class FpsGrid(Grid):
+
+  def __init__(self, fps=60.0):
+    Grid.__init__(self)
+    self.fps = fps
+    self.stop = False
+
+  def DrawFrame(self):
+    msgs = []
+    for x in range(32):
+      msg = [x]
+      for y in range(32):
+        msg += self.grid[y][x].rgb
+      msgs.append(msg)
+    try:
+      Push(msgs)
+    except:
+      print msgs
+      raise
+
+  def Start(self):
+    def Draw():
+      while not self.stop:
+        self.DrawFrame()
+        time.sleep(1.0 / self.fps)
+    t = threading.Thread(target=Draw)
+    t.daemon = True
+    t.start()
+
+  def Stop(self):
+    self.stop = True
+    time.sleep(0.5)
 
 
 def TurnOff():
