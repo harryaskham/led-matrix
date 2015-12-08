@@ -379,11 +379,7 @@ class FpsGrid(Grid):
       for y in range(32):
         msg += self.grid[y][x].rgb
       msgs.append(msg)
-    try:
-      Push(msgs)
-    except:
-      print msgs
-      raise
+    Push(msgs)
 
   def Start(self):
     def Draw():
