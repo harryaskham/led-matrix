@@ -1,14 +1,20 @@
 import socket
+import argparse
 from PIL import Image
 import images2gif
-import RPi.GPIO as GPIO
+
+try:
+  import RPi.GPIO as GPIO
+  import inputs
+except:
+  print 'No GPIO detected'
+  pass
 
 import time
 import math
 import threading
 import random
 
-import inputs
 
 
 UDP_IP = '192.168.0.16'
@@ -48,9 +54,9 @@ def SlowRedStrobe(x, y, t):
 
 def SquareExpand(x, y, t):
   return [
-    127 * (math.sin(y * t / 0.00001 + 3) + 1),
-    127 * (math.cos(x * t / 0.00001 + 4) + 1),
-    127 * (math.sin(t / 0.00001 + 5) + 1)]
+    int(127 * (math.sin(y * t / 0.00001 + 3) + 1)),
+    int(127 * (math.cos(x * t / 0.00001 + 4) + 1)),
+    int(127 * (math.sin(t / 0.00001 + 5) + 1))]
 
 def Random(x, y, t):
   return [int(255 * random.random()) for i in range(3)]
@@ -282,7 +288,7 @@ class GridDrawer(object):
 
 def Circle(x, y, t):
   scale = 0.01
-  return [(math.pow(x-8+t/10, 2) + math.pow(y-8-t/10, 2)) % 256,
+  return [int((math.pow(x-8+t/10, 2) + math.pow(y-8-t/10, 2))) % 256,
           int(60 * (math.cos(t * scale) + 1)),
           int(50 * (math.sin(t * scale) + 1))]
 
@@ -309,39 +315,43 @@ FUNCS = [
     (FastStrobe, 200),
 ]
 
-rotary_handler = RotaryHandler()
-button_handler = ButtonHandler()
 
-MODS = [
-    rotary_handler.ContrastMod,
-    rotary_handler.BrightnessMod
-]
-
-
-def GetFrameMsgs(func, t):
+def GetFrameMsgs(func, t, mods):
   msgs = []
   for x in xrange(32):
     msg = [x]  # First entry is the strip number
     for y in xrange(32):
       pixel = func(x, y, t)
-      for mod in MODS:
+      for mod in mods:
         pixel = mod(pixel)
       msg += pixel
     msgs.append(msg)
   return msgs
 
 
-def Run():
+def Run(pi_mode):
+  print 'Pi mode: %s' % pi_mode
+  mods = []
+  if pi_mode:
+    rotary_handler = RotaryHandler()
+    button_handler = ButtonHandler()
+    mods = [
+        rotary_handler.ContrastMod,
+        rotary_handler.BrightnessMod
+    ]
+
   for func, length in FUNCS:
     for t in range(length):
-      while button_handler.paused:
+      while pi_mode and button_handler.paused:
         if QUIT:
           return
         time.sleep(1)
       if QUIT:
         return
-      Push(GetFrameMsgs(func, t))
-      time.sleep(rotary_handler.GetSleepInRange(0.00, 1.0))
+      Push(GetFrameMsgs(func, t, mods))
+
+      sleep = rotary_handler.GetSleepInRange(0.00, 1.0) if pi_mode else 0.002
+      time.sleep(sleep)
 
 
 def TurnOff():
@@ -358,12 +368,16 @@ def TurnOff():
 
 
 if __name__ == '__main__':
+  parser = argparse.ArgumentParser('pixels', add_help=True)
+  parser.add_argument('--pi_mode', help='on pi or not?')
+  args = parser.parse_args()
   try:
-    t = threading.Thread(target=Run)
+    t = threading.Thread(target=Run, args=[args.pi_mode])
     t.daemon = True
     t.start()
     raw_input("Press Enter to continue...")
     QUIT = True
     TurnOff()
   finally:
-    GPIO.cleanup()
+    if args.pi_mode:
+      GPIO.cleanup()
