@@ -316,6 +316,24 @@ FUNCS = [
     (FastStrobe, 200),
 ]
 
+func_map = {
+    'life': GridDrawer(Life(), slowdown=2).Run,
+    'trippy': GridDrawer(Gif('trippy.gif'), slowdown=2).Run,
+    'rotsq': GridDrawer(Gif('rotsq.gif')).Run,
+    'snake': GridDrawer(Snake()).Run,
+    'random': Random,
+    'circle': Circle,
+    'triangle': GridDrawer(Gif('triangle.gif')).Run,
+    'squarex': SquareExpand,
+    'faststrobe': FastStrobe,
+    'nyan': GridDrawer(Gif('nyan.gif'), slowdown=3).Run,
+    'tan': MadTanStrobe,
+    'slowstrobe': SlowStrobe,
+    'spinlines': SpinLines,
+    'redstrobe': SlowRedStrobe
+}
+
+
 
 def GetFrameMsgs(func, t, mods):
   msgs = []
@@ -330,7 +348,7 @@ def GetFrameMsgs(func, t, mods):
   return msgs
 
 
-def Run(pi_mode):
+def Run(pi_mode, func):
   # 60fps canvas
   grid = FpsGrid()
   grid.Start()
@@ -345,7 +363,12 @@ def Run(pi_mode):
         rotary_handler.BrightnessMod
     ]
 
-  for func, length in FUNCS:
+  if func:
+    funcs = [(func_map[func], 1000000)]
+  else:
+    funcs = FUNCS
+
+  for func, length in funcs:
     for t in range(length):
       while pi_mode and button_handler.paused:
         if QUIT:
@@ -379,11 +402,7 @@ class FpsGrid(Grid):
       for y in range(32):
         msg += self.grid[y][x].rgb
       msgs.append(msg)
-    try:
-      Push(msgs)
-    except:
-      print msgs
-      raise
+    Push(msgs)
 
   def Start(self):
     def Draw():
@@ -415,9 +434,10 @@ def TurnOff():
 if __name__ == '__main__':
   parser = argparse.ArgumentParser('pixels', add_help=True)
   parser.add_argument('--pi_mode', help='on pi or not?')
+  parser.add_argument('--func', choices=func_map.keys(), help='func to run')
   args = parser.parse_args()
   try:
-    t = threading.Thread(target=Run, args=[args.pi_mode])
+    t = threading.Thread(target=Run, args=[args.pi_mode, args.func])
     t.daemon = True
     t.start()
     raw_input("Press Enter to continue...")
