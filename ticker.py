@@ -4,6 +4,7 @@ import RPi.GPIO as GPIO
 import time
 import threading
 import inputs
+import math
 
 class Ticker(object):
 
@@ -23,10 +24,10 @@ class Ticker(object):
     self.pause = False
 
   def _GetSleepTime(self, t):
-    if self.mode == Mode.LINEAR:
+    if self.mode == Ticker.Mode.LINEAR:
       return self.sleep
-    if self.mode == Mode.SIN:
-      return self.sleep * 0.5 * (math.sin(t / 10.0) + 1 + self.sleep)
+    if self.mode == Ticker.Mode.SIN:
+      return self.sleep * 0.5 * (math.sin((t/2.0) * self.sleep) + 1 + self.sleep)
 
   def Start(self):
     def run():
@@ -38,6 +39,7 @@ class Ticker(object):
         time.sleep(self._GetSleepTime(t))
         GPIO.output(self.PIN, False)
         time.sleep(self._GetSleepTime(t))
+        t += 1
 
     t = threading.Thread(target=run)
     t.daemon = True
