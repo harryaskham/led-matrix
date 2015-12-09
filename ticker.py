@@ -38,7 +38,8 @@ class Ticker(object):
       self.sleep *= 1.0 / self.SENSITIVITY
 
   def Pause(self, down):
-    self.pause = not self.pause
+    if down:
+      self.pause = not self.pause
 
 
 
