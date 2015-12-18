@@ -27,7 +27,7 @@ class Ticker(object):
     if self.mode == Ticker.Mode.LINEAR:
       return self.sleep
     if self.mode == Ticker.Mode.SIN:
-      return self.sleep * 0.5 * (math.sin((t/2.0) * self.sleep) + 1 + self.sleep)
+      return self.sleep * 0.5 * (math.sin(0.1 * t / math.sqrt(self.sleep)) + 1 + self.sleep)
 
   def Start(self):
     def run():
@@ -58,7 +58,7 @@ class Ticker(object):
 
 
 
-ticker = Ticker(mode=Ticker.Mode.SIN)
+ticker = Ticker(mode=Ticker.Mode.LINEAR)
 rot = inputs.RotaryEncoder(on_rotation=ticker.HandleSpeed, on_button=ticker.Pause)
 
 ticker.Start()
